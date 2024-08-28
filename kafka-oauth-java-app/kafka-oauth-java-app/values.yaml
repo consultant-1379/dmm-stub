@@ -1,0 +1,50 @@
+# Default values for kafka-oauth-java-app.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  name: armdocker.rnd.ericsson.se/proj-eric-oss-dev-test/eric-oss-dmm-stub:1.0.5-80
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+
+imagePullSecrets: k8s-registry-secret
+nameOverride: ""
+fullnameOverride: ""
+
+
+env:
+  BROKER: eric-oss-dmm-kf-op-sz-kafka-bootstrap:9093
+  BOOTSTRAP: bootstrap.klug017-x2.ews.gic.ericsson.se:443
+  TOPIC: dmm-test
+  CLIENT_ID: kafka-wrapper-java-client
+  CLIENT_PSW: 123456
+  TLS: true
+
+securityContext: 
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: false
+  runAsNonRoot: true
+  runAsUser: 1000
+
+service:
+  type: ClusterIP
+  port: 8082
+
+
+
+resources: {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+

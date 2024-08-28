@@ -1,0 +1,10 @@
+asdId: 1
+asdSchemaVersion: 1.0.0
+asdProvider: Middlemen
+asdApplicationName: rapp-simulation
+asdApplicationVersion: VERSION
+asdApplicationInfoName: Kafka lisitioner
+asdInfoDescription: Kafka lisitioner for App Onboarding
+deploymentItems:
+    deploymentItemId: 1
+    artifactId: OtherDefinitions/ASD/rapp-simulation-VERSION.tgz

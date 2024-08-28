@@ -1,0 +1,21 @@
+{{- if index .Values "env" "TLS" }}
+apiVersion: siptls.sec.ericsson.com/v1
+kind: InternalCertificate
+metadata:
+  labels:
+    {{- include "kafka-wrapper.selectorLabels" . | nindent 4 }}
+  name: {{ .Chart.Name }}-int-cert
+spec:
+  certificate:
+    extendedKeyUsage:
+      tlsClientAuth: true
+      tlsServerAuth: false
+    issuer:
+      reference: eric-oss-dmm-kf-op-sz-clients-ca-cert
+    subject:
+      cn: {{ .Chart.Name }}
+  kubernetes:
+    certificateName: cert.pem
+    generatedSecretName: {{ .Chart.Name }}-secret
+    privateKeyName: key.pem
+{{- end }}

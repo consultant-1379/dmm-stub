@@ -1,0 +1,13 @@
+schedule
+kafka-python 
+crc32c
+lz4
+Flask
+confluent_kafka
+requests
+jsonschema
+argparse
+uuid
+numpy
+python-json-logger
+

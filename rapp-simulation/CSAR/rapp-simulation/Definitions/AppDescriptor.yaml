@@ -1,0 +1,18 @@
+Description of an APP:
+    APPName: rapp-simulation
+    APPVersion: VERSION
+    APPType: rApp
+APPComponent:
+    NameofComponent: rapp-simulation
+    Version: VERSION
+    Path: OtherDefinitions/ASD/rapp-simulationASD.yaml
+    ArtefactType: Microservice
+APPPermissions:
+ - Resource: kafka
+   Scope: external
+APPRoles:
+ - Name: DataCatalog_Application_ReadOnly
+ - Name: DataCatalog_Producer_Application_Operator
+ - Name: DataCollectionControl_Subscriber_Application_Operator
+ - Name: SchemaRegistry_Consumer_Application_Operator
+ - Name: SchemaRegistry_Consumer_Application_Operator

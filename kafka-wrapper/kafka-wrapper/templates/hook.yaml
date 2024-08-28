@@ -1,0 +1,114 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "kafka-ingress-wrapper.name" . }}-client-createhook
+  labels:
+    {{- include "kafka-ingress-wrapper.selectorLabels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-5"
+spec:
+  template:
+    metadata:
+      labels:
+        {{- include "kafka-ingress-wrapper.selectorLabels" . | nindent 8 }}
+    spec:
+      imagePullSecrets:
+        - name: k8s-registry-secret
+      restartPolicy: Never
+      containers:
+        - name: client-create
+          image: armdocker.rnd.ericsson.se/proj-adp-cicd-drop/bob-py3kubehelmbuilder:latest
+          env:
+            - name: "IAM_HOST"
+              valueFrom:
+                configMapKeyRef:
+                  name: testware-hostnames
+                  key: iam
+            - name: "CLIENT_ID"
+              value: {{ $.Values.env.CLIENT_ID }}
+            - name: "CLIENT_PSW"
+              value: "{{ $.Values.env.CLIENT_PSW }}"
+          volumeMounts:
+          - mountPath: /tmp
+            name: tmp-volume
+          - mountPath: /tmp/secret
+            name: iam-admin
+          command: [ 'sh', '-c']
+          securityContext:
+            allowPrivilegeEscalation: false
+            privileged: false
+            readOnlyRootFilesystem: false
+            runAsNonRoot: true
+            runAsUser: 40514
+            capabilities:
+              drop:
+                - all
+          args:
+          - |
+             export IAM_URI=https://$IAM_HOST/auth/realms/master/protocol/openid-connect/token
+             export IAM_CLIENT_URI=https://$IAM_HOST/auth/admin/realms/master/clients
+             export KCADMIN=$(cat /tmp/secret/kcadminid)
+             export KCPSW=$(cat /tmp/secret/kcpasswd)
+             echo "kc-admin-id is - $KCADMIN"
+             echo "kc-admin-password is - $KCPSW"
+             echo "IAM URL for creating bearer token - $IAM_URI"
+             CREATE_TOKEN=$(curl -k -L -X POST $IAM_URI \
+              -H "Content-Type: application/x-www-form-urlencoded" \
+              --data-urlencode "client_id=admin-cli" \
+              --data-urlencode "grant_type=password" \
+              --data-urlencode "username=$KCADMIN" \
+              --data-urlencode "password=$KCPSW")
+              echo "Response for create token "
+              echo $CREATE_TOKEN
+              echo $CREATE_TOKEN | jq '.access_token' > /tmp/token.env
+              sed -i 's/^"\(.*\)"$/\1/' /tmp/token.env
+              export TOKEN=$(cat /tmp/token.env)
+              echo "OAUTH BEARER TOKEN"
+              echo ${TOKEN}
+              echo "IAM URL for create client $IAM_CLIENT_URI"
+              curl -L -k -X POST $IAM_CLIENT_URI \
+                -H "Accept: */*" \
+                -H "Content-Type: application/json" \
+                -H "Authorization: Bearer ${TOKEN}" \
+                -d '{
+                  "clientId": "'"$CLIENT_ID"'",
+                  "enabled": true,
+                  "attributes": {
+                      "ExternalClient": "True"
+                  },
+                  "serviceAccountsEnabled": true,
+                  "standardFlowEnabled": false,
+                  "secret": "'"$CLIENT_PSW"'",
+                  "protocolMappers": [
+                      {
+                          "config": {
+                              "id.token.claim": "true",
+                              "access.token.claim": "true",
+                              "included.custom.audience": "kafka"
+                          },
+                          "name": "kafkaAd",
+                          "protocol": "openid-connect",
+                          "protocolMapper": "oidc-audience-mapper"
+                      },
+                      {
+                          "config": {
+                              "claim.value": "'"$CLIENT_ID"'",
+                              "userinfo.token.claim": "true",
+                              "id.token.claim": "false",
+                              "access.token.claim": "true",
+                              "claim.name": "oauth\\.username\\.claim",
+                              "jsonType.label": "String"
+                          },
+                          "name": "hardcodeclaim",
+                          "protocol": "openid-connect",
+                          "protocolMapper": "oidc-hardcoded-claim-mapper"
+                      }    ]
+              }'
+      volumes:
+        - name: tmp-volume
+          emptyDir: {}
+        - name: iam-admin
+          secret:
+            defaultMode: 420
+            secretName: eric-sec-access-mgmt-creds  

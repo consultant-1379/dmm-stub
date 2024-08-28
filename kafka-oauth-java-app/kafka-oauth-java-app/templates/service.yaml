@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "kafka-oauth-java-app.fullname" . }}
+  labels:
+    {{- include "kafka-oauth-java-app.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - name: http
+      protocol: TCP
+      port: {{ .Values.service.port }}
+      targetPort: {{ .Values.service.port }}
+  selector:
+    {{- include "kafka-oauth-java-app.selectorLabels" . | nindent 4 }}

@@ -1,0 +1,128 @@
+modelVersion: 2.0
+description: "Middleman: dmm k6 testsuite Pipeline"
+docker-images:
+  - bob-py3-kube-helm-builder: armdocker.rnd.ericsson.se/proj-adp-cicd-drop/bob-py3kubehelmbuilder:latest
+  - testware-cli: armdocker.rnd.ericsson.se/proj-eric-oss-dev-test/k6-reporting-tool-cli:latest
+import:
+  common: common-properties.yaml
+properties:
+  - testsuite-dir: .
+  - testsuite-image-name: k6-dmm-testsuite
+  - kube-config-path: ./admin.conf
+
+env:
+  - PWD
+  - HOME
+  - NAMESPACE (default=dmm-deploy)
+  - BUILD_DIR (default=./build)
+  - HA_INFO_FILE (default=${env.BUILD_DIR}/ha-info.log)
+  - GAS_HOSTNAME
+  - FUNCTIONAL_USER_USERNAME
+  - FUNCTIONAL_USER_PASSWORD
+  - BUILD_URL
+  - REPO_NAME 
+properties:
+  - DMM-TESTWARE-NAME: eric-oss-dmm-app-test
+  - REPO: dmm-app-test
+  - TESTWARE_PATH: https://arm.seli.gic.ericsson.se/artifactory/proj-eric-oss-drop-helm-local
+  
+var:
+  - user_path
+  - id
+  - install_start_time
+  - install_end_time
+  - install_time
+  - upgrade_start_time
+  - upgrade_end_time
+  - upgrade_time
+  - rollback_start_time
+  - rollback_end_time
+  - rollback_time
+
+rules:
+  all-test:
+    - rule: clean
+    - rule: create-property
+    - rule: deployment-test
+    - rule: characteristics-test
+    - rule: robustness-test
+    - rule: create-htlm
+
+  clean:
+    - task: clean 
+      cmd : 
+        - rm -rf .bob
+        - rm -rf data.json
+        - rm -rf *.properties
+        - rm -rf *.html
+        - mkdir .bob
+  install-chart:
+    - task: install-chart
+      cmd: 
+        - echo ~ > .bob/var.user_path
+        - kubectl create namespace ${common.namespace} --kubeconfig ${common.kubeconfig} || true
+        - kubectl create secret generic k8s-registry-secret --from-file=.dockerconfigjson=${var.user_path}/.docker/config.json --type=kubernetes.io/dockerconfigjson --namespace ${common.namespace} --kubeconfig ${common.kubeconfig} || true
+        - echo $(date +%s.%N) > .bob/var.install_start_time
+        - helm install ${common.repo-name} ${common.repo-name}/${common.repo-name} --version ${common.install-version} -f site_values.yaml --namespace ${common.namespace} --kubeconfig ${common.kubeconfig} --wait --debug
+        - end=$(date +%s.%N)
+        - echo $(date +%s.%N) > .bob/var.install_end_time
+        - echo "${var.install_end_time} - ${var.install_start_time}" | bc > .bob/var.install_time
+  
+  upgrade-chart:
+    - task: upgrade-chart
+      cmd:
+        - echo $(date +%s.%N) > .bob/var.upgrade_start_time
+        - helm upgrade ${common.repo-name} ${common.repo-name}/${common.repo-name} --version ${common.upgrade-version} -f site_values.yaml --namespace ${common.namespace} --kubeconfig ${common.kubeconfig} --wait --debug
+        - end=$(date +%s.%N)
+        - echo $(date +%s.%N) > .bob/var.upgrade_end_time
+        - echo "${var.upgrade_end_time} - ${var.upgrade_start_time}" | bc > .bob/var.upgrade_time
+  deploy-chart:
+    - rule: uninstall-chart
+    - task: deploy-chart
+      cmd: 
+        - helm repo remove ${common.repo-name} || true
+        - helm repo add ${common.repo-name} ${common.repo-path} --username=${common.username} --password=${common.password}
+    - rule: install-chart
+  rollback-chart:
+    - task: rollback-chart
+      cmd:
+        - echo $(date +%s.%N) > .bob/var.rollback_start_time
+        - helm rollback ${common.repo-name} 1 --namespace ${common.namespace} --kubeconfig ${common.kubeconfig} --wait --debug
+        - end=$(date +%s.%N)
+        - echo $(date +%s.%N) > .bob/var.rollback_end_time
+        - echo "${var.rollback_end_time} - ${var.rollback_start_time}" | bc > .bob/var.rollback_time
+  uninstall-chart:
+    - task: uninstall
+      cmd: 
+        - helm uninstall ${common.repo-name} --namespace ${common.namespace} --kubeconfig ${common.kubeconfig} || true
+        - kubectl delete namespace ${common.namespace} --kubeconfig ${common.kubeconfig} || true
+
+  robustness-test:
+    - task: robustness-test
+      cmd: 
+        - ./robustness.sh ${common.kubeconfig} ${common.namespace} ${common.service} "${common.dep-service}" ${common.repo-name} "${common.upgrade-version}"
+  characteristics-test:
+    - task: characteristics-test
+      cmd: ./characteristics.sh ${common.kubeconfig} ${common.namespace} ${common.service}
+  api-test-upgrade:
+    - task: create-json
+      cmd: python3 json_create.py "${common.test-config-upgrade}"
+    - task: characteristics-test
+      cmd: ./characteristics.sh ${common.kubeconfig} ${common.namespace} ${common.service}
+  create-property:
+    - task: create-property
+      cmd:
+        - echo [Deployment] > deployment.properties
+        - echo [Characteristics] > characteristics.properties
+        - echo [Robustness] > robustness.properties
+  create-htlm:
+    - task: create-htlm
+      cmd: python3 result.py
+  deployment-test:
+    - task: create-json
+      cmd: python3 json_create.py "${common.test-config}" "install"
+    - task: deployment
+      cmd: 
+        - echo ${common.install-version}
+        - ./deployment.sh ${common.kubeconfig} ${common.namespace} ${common.service} ${common.scale} "${common.override-service-name}" ${common.repo-name} ${common.repo-path} ${common.username} '${common.password}' "${common.install-version}" "${common.upgrade-version}" '${common.api-test}'
+  

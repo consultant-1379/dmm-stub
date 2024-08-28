@@ -1,0 +1,12 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "acmr-mock.name" . }}-network-policy
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "acmr-mock.selectorLabels" . | nindent 6 }}
+  ingress:
+    - {}
+  egress:
+    - {}

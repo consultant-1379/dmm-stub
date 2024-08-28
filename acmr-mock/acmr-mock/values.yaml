@@ -1,0 +1,16 @@
+# Default values for kafka-wrapper.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+image:
+  repository: nginx
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+
+kafka:
+  bootstrap_servers: eric-oss-dmm-kf-op-sz-kafka-bootstrap:9092
+
+env:
+  TLS: true
+

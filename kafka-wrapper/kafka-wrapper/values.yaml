@@ -1,0 +1,50 @@
+# Default values for kafka-wrapper.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+
+kafkasecret: kafka-cacert-secret
+iamsecret: iam-cacert-secret
+image:
+  repository: nginx
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+
+resources:
+  requests:
+    memory: "500Mi"
+    cpu: "1000m"
+  limits:
+    memory: "2048Mi"
+    cpu: "2500m"
+
+kafka:
+  bootstrap_servers: eric-oss-dmm-kf-op-sz-kafka-bootstrap:9093
+  # Topic count will be a same replica count
+  topicCount: 3
+  # Each replica will produce/consume =  {messageCount}/{topicCount}
+  messageCount: "10000000"
+  messageSize: "1000"
+  load: false
+  acmr_mock: false
+  acmr_topic: "policy-acruntime-participant"
+  adcload: false
+  topicbuffertime: "540"
+  adctotalmessages: 2
+  adcmsgsperreplica: 1
+  adctotaltopics:
+    - "5g-pm-event-file-transfer-and-processing--standardized"
+    - "5g-pm-event-file-transfer-and-processing--ericsson"
+
+
+eric_data_object_storage:
+  enabled: false
+KafkaIngressWrapper:
+  enable: false
+  name: kafka-ingress-wrapper
+env:
+  CLIENT_ID: middlementest2
+  CLIENT_PSW: 123456
+  TLS: true
+

@@ -1,0 +1,118 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "kafka-oauth-java-app.fullname" . }}-deployment
+  labels:
+    {{- include "kafka-oauth-java-app.labels" . | nindent 4 }}
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/path: "/metrics"
+    prometheus.io/port: "8082"
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "kafka-oauth-java-app.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "kafka-oauth-java-app.selectorLabels" . | nindent 8 }}
+        {{- include "kafka-oauth-java-app.service-mesh-inject" .| nindent 8 }}
+        {{- include "kafka-oauth-java-app.service-mesh-ism2osm-labels" .| nindent 8 }}
+        {{- include "kafka-oauth-java-app.eric-data-object-storage-mn-access-label" .| nindent 8 }}
+      annotations:
+        {{- include "kafka-oauth-java-app.service-mesh-inject" .| nindent 8 }}
+        {{- include "kafka-oauth-java-app.service-mesh-volume" .| nindent 8 }}
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "8082"
+    spec:
+      imagePullSecrets:
+        - name: k8s-registry-secret
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      initContainers:
+      - name: pem-to-keyandtruststore
+        image: "{{ .Values.image.name }}"
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: messagebusca
+          value: /run/secrets/messagebus/tls.crt
+        - name: iamtls
+          value: /run/secrets/iam/tls.crt
+        - name: keystore_pkcs12
+          value: /var/tmp/kafka-client-truststore.p12
+        - name: keystore_jks
+          value: /tmp/kafka/keystore.jks
+        - name: truststore_jks
+          value: /run/secrets/kafka/keyandtruststore/truststore.jks
+        - name: PASSWORD
+          value: password
+        command: ['/bin/bash','-c']
+        args: ["keytool -keystore $keystore_pkcs12 -storetype PKCS12 -alias ca -storepass $PASSWORD -keypass $PASSWORD -import -file $iamtls -noprompt && keytool -keystore $keystore_pkcs12 -storetype PKCS12 -alias kafka -storepass $PASSWORD -keypass $PASSWORD -import -file $messagebusca -noprompt"]
+        volumeMounts:
+        -
+          mountPath: /run/secrets/messagebus/
+          name: messagebusca
+          readOnly: true
+        -
+          mountPath: /run/secrets/iam/
+          name: iamtls
+          readOnly: true
+        - 
+          mountPath: /var/tmp/
+          name: keystore-volume
+
+      volumes:
+      -
+        name: messagebusca
+        secret:
+          defaultMode: 420
+          secretName: kafka-cacert-secret
+      -
+        name: iamtls
+        secret:
+          defaultMode: 420
+          secretName: iam-cacert-secret    
+      -
+        name: keystore-volume
+        emptyDir: {}            
+      containers:
+        - name: {{ .Chart.Name }}-test
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.name }}"
+          env:
+            - name: BOOTSTRAP_EXTERNAL
+              valueFrom:
+                configMapKeyRef:
+                  name: testware-hostnames
+                  key: kafkaBootstrap
+            - name: "BROKER"
+              value: {{ $.Values.env.BROKER }}
+            - name: IAM_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: testware-hostnames
+                  key: iam
+            - name: "TOPIC"
+              value: {{ $.Values.env.TOPIC }}
+            - name: keystore_pkcs12
+              value: /var/tmp/kafka-client-truststore.p12
+            - name: CLIENT_ID
+              value: {{ $.Values.env.CLIENT_ID }}
+            - name: CLIENT_PSW
+              value: "{{ $.Values.env.CLIENT_PSW }}"             
+            - name: PASSWORD
+              value: password
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          volumeMounts:
+          - 
+            mountPath: /var/tmp/
+            name: keystore-volume
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

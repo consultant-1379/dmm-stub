@@ -1,0 +1,12 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "kafka-wrapper.name" . }}-network-policy
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "kafka-wrapper.selectorLabels" . | nindent 6 }}
+  ingress:
+    - {}
+  egress:
+    - {}

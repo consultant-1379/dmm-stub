@@ -1,0 +1,82 @@
+{{- if index .Values "KafkaIngressWrapper" "enable" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "kafka-ingress-wrapper.name" . }}-deployment
+  labels:
+    {{- include "kafka-ingress-wrapper.selectorLabels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "kafka-ingress-wrapper.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "kafka-ingress-wrapper.selectorLabels" . | nindent 8 }}
+    spec:
+      imagePullSecrets:
+        - name: k8s-registry-secret
+      initContainers:
+      - name: create-cert
+        image: {{ template "kafka-wrapper.imagePath" . }}
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: messagebusca
+          value: /run/secrets/messagebus/ca.crt
+        - name: iamtls
+          value: /run/secrets/iam/tls.crt
+        - name: serverca
+          value: /var/tmp/serverca.crt
+        command: ['/bin/bash','-c']
+        args: ["cat /run/secrets/messagebus/ca.crt /run/secrets/iam/tls.crt > /var/tmp/serverca.crt"]
+        volumeMounts:
+        -
+          mountPath: /run/secrets/messagebus/
+          name: messagebusca
+          readOnly: true
+        -
+          mountPath: /run/secrets/iam/
+          name: iamtls
+          readOnly: true
+        - 
+          mountPath: /var/tmp/
+          name: serverca
+
+      volumes:
+      -
+        name: messagebusca
+        secret:
+          defaultMode: 420
+          secretName: eric-oss-dmm-kf-op-sz-cluster-ca-cert
+      -
+        name: iamtls
+        secret:
+          defaultMode: 420
+          secretName: iam-tls-secret     
+      -
+        name: serverca
+        emptyDir: {} 
+      containers:
+        - name: {{ .Chart.Name }}
+          image: {{ template "kafka-wrapper.imagePath" . }}
+          tty: true
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+          - name: BROKER
+            value: "{{ .Values.kafka.bootstrap_servers }}"
+          - name: "IAM_URI"
+            value: https://{{ $.Values.env.IAM_URI }}/auth/realms/master/protocol/openid-connect/token
+          - name: CLIENT_ID
+            value: {{ $.Values.env.CLIENT_ID }}
+          - name: CLIENT_PSW
+            value: "{{ $.Values.env.CLIENT_PSW }}"    
+          - name: BOOTSTRAP_EXTERNAL
+            value: {{ $.Values.env.BOOTSTRAP_EXTERNAL }}:443
+          volumeMounts:
+          - 
+            mountPath: /var/tmp/
+            name: serverca
+          command: ['node']
+          args: ["nodejs/app.js"]
+{{- end }}

@@ -1,0 +1,14 @@
+{{- if index .Values "KafkaIngressWrapper" "enable" }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "kafka-ingress-wrapper.name" . }}-network-policy
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "kafka-ingress-wrapper.selectorLabels" . | nindent 6 }}
+  ingress:
+    - {}
+  egress:
+    - {}
+{{- end }}

@@ -1,0 +1,17 @@
+modelVersion: 2.0
+properties:
+  - repo-name: eric-oss-dmm  
+  - repo-path: https://arm.seli.gic.ericsson.se/artifactory/proj-eric-oss-drop-helm-local # Need to provide artifact path for chart
+  - username: zmxxven 
+  - password: abcd
+  - install-version: 0.184.0 
+  - upgrade-version: "0.185.0,0.186.0" 
+  - namespace: dep-test-6
+  - kubeconfig: /home/zmxxven/workdir/config/hall923 
+  - service: "eric-oss-dmm-kf-sz-bridge,eric-oss-data-catalog" 
+  - dep-service: "[(eric-oss-dmm-kf-op-sz-kafka),(eric-oss-dmm-kf-op-sz-kafka,eric-dmm-common-db)]" 
+  - api-test: false
+  - test-config: "[(eric-oss-dmm-kf-sz-bridge,8080,POST,topics/test1,content-type: application/vnd.kafka.json.v2+json,200,1),(eric-oss-dmm-kf-sz-bridge,8080,POST,topics/test1,content-type: application/vnd.kafka.json.v2+json,200,2)],[(eric-oss-data-catalog,9590,POST,catalog/v1/bulk-data-repository,content-type: application/json,201,1)]"
+  - test-config-upgrade: "[(eric-oss-dmm-kf-sz-bridge,8080,POST,topics/test1,content-type: application/vnd.kafka.json.v2+json,200,1),(eric-oss-dmm-kf-sz-bridge,8080,POST,topics/test1,content-type: application/vnd.kafka.json.v2+json,200,2)],[(eric-oss-data-catalog,9590,POST,catalog/v1/bulk-data-repository,content-type: application/json,201,1)]"
+  - override-service-name: '("","")'
+  - scale: "2,3"

@@ -1,0 +1,24 @@
+#
+# COPYRIGHT Ericsson 2021
+#
+#
+#
+# The copyright to the computer program(s) herein is the property of
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "kafka-wrapper.name" . }}-clusterrole
+  labels:
+    {{- include "kafka-wrapper.selectorLabels" . | nindent 4 }}
+rules:
+- apiGroups:
+  - "kafka.strimzi.io" 
+  resources: 
+  - kafkatopics
+  - kafkausers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - update

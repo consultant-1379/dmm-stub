@@ -1,0 +1,12 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "rapp-simulation.name" . }}-network-policy
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "rapp-simulation.selectorLabels" . | nindent 6 }}
+  ingress:
+    - {}
+  egress:
+    - {}

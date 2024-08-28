@@ -1,0 +1,175 @@
+{{- if or (and .Values.kafka.load .Values.kafka.acmr_mock) (and .Values.kafka.load .Values.kafka.adcload) (and .Values.kafka.acmr_mock .Values.kafka.adcload) }}
+{{- fail "At least two of acmr_mock,load and adcload flags cannot be true at the same time " }}
+{{- end }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "kafka-wrapper.name" . }}-deployment
+  labels:
+    {{- include "kafka-wrapper.selectorLabels" . | nindent 4 }}
+    annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/path: "/metrics"
+    prometheus.io/port: "8082"
+spec:
+  replicas:
+    {{ if eq .Values.kafka.load true}}
+    {{ .Values.kafka.topicCount }}
+    {{ else if eq .Values.kafka.adcload true}}
+    {{ include "kafka-wrapper.adcload-replicageneration" . }}
+    {{ else }}
+    1
+    {{ end }}
+  selector:
+    matchLabels:
+      {{- include "kafka-wrapper.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "kafka-wrapper.selectorLabels" . | nindent 8 }}
+        {{- include "kafka-wrapper.service-mesh-inject" .| nindent 8 }}
+        {{- include "kafka-wrapper.service-mesh-ism2osm-labels" .| nindent 8 }}
+        {{- include "kafka-wrapper.eric-data-object-storage-mn-access-label" .| nindent 8 }}
+      annotations:
+        {{- include "kafka-wrapper.service-mesh-inject" .| nindent 8 }}
+        {{- include "kafka-wrapper.service-mesh-volume" .| nindent 8 }}
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "8082"
+    spec:
+      serviceAccountName: {{ include "kafka-wrapper.name" . }}-sa
+      imagePullSecrets:
+        - name: k8s-registry-secret
+      initContainers:
+      - name: create-cert
+        image: {{ template "kafka-wrapper.imagePath" . }}
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: messagebusca
+          value: /run/secrets/messagebus/tls.crt
+        - name: iamtls
+          value: /run/secrets/iam/tls.crt
+        - name: serverca
+          value: /var/tmp/serverca.crt
+        command: ['/bin/bash','-c']
+        args: ["cat /run/secrets/messagebus/tls.crt /run/secrets/iam/tls.crt > /var/tmp/serverca.crt"]
+        volumeMounts:
+        -
+          mountPath: /run/secrets/messagebus/
+          name: messagebusca
+          readOnly: true
+        -
+          mountPath: /run/secrets/iam/
+          name: iamtls
+          readOnly: true
+        - 
+          mountPath: /var/tmp/
+          name: serverca
+      - name: untar-compile
+        image: {{ template "kafka-wrapper.imagePath" . }}
+        imagePullPolicy: IfNotPresent
+        command: ['python3.11']
+        args: ["unpackage.py"]
+        volumeMounts:
+        - mountPath: /resources
+          name: tarfile
+        - mountPath: /kafka-wrapper/pm_event
+          name: protopath
+      volumes:
+        - name: messagebusca
+          secret:
+            defaultMode: 420
+            secretName: {{ .Values.kafkasecret }} 
+        - name: iamtls
+          secret:
+            defaultMode: 420
+            secretName: {{ .Values.iamsecret }}
+        - name: serverca
+          emptyDir: {} 
+        - name: tarfile
+          emptyDir: {} 
+        - name: protopath
+          emptyDir: {} 
+      containers:
+        - name: {{ .Chart.Name }}
+          image: {{ template "kafka-wrapper.imagePath" . }}
+          tty: true
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8082
+              protocol: TCP
+          resources:
+            requests:
+              memory: {{ .Values.resources.requests.memory }}
+              cpu: {{ .Values.resources.requests.cpu }}
+            limits:
+              memory: {{ .Values.resources.limits.memory }}
+              cpu: {{ .Values.resources.limits.cpu }}
+          env:
+          {{ if eq .Values.eric_data_object_storage.enabled true}}
+          - name: BDR_ACCESS_KEY
+            valueFrom:
+              secretKeyRef:
+                name: eric-data-object-storage-mn-secret
+                key: accesskey
+          - name: BDR_SECRET_KEY
+            valueFrom:
+              secretKeyRef:
+                name: eric-data-object-storage-mn-secret
+                key: secretkey
+          {{ end }}
+          - name: BROKER
+            value: "{{ .Values.kafka.bootstrap_servers }}"
+          - name: NAMESPACE
+            value: {{ .Release.Namespace }}
+          - name: "IAM_URI"
+            valueFrom:
+              configMapKeyRef:
+                name: testware-hostnames
+                key: iam
+          - name: CLIENT_ID
+            value: {{ $.Values.env.CLIENT_ID }}
+          - name: CLIENT_PSW
+            value: "{{ $.Values.env.CLIENT_PSW }}"    
+          - name: COUNT
+            value: "{{ $.Values.kafka.messageCount }}" 
+          - name: SIZE
+            value: "{{ $.Values.kafka.messageSize }}" 
+          - name: TOPIC_COUNT
+            value: "{{ $.Values.kafka.topicCount }}" 
+          - name: LOAD
+            value: "{{ $.Values.kafka.load }}"
+          - name: ACMR_MOCK
+            value: "{{ $.Values.kafka.acmr_mock }}"
+          - name: ADC_LOAD
+            value: "{{ $.Values.kafka.adcload }}"
+          - name: ACMR_TOPIC
+            value: "{{ $.Values.kafka.acmr_topic }}"
+          {{- range $index, $value := .Values.kafka.adctotaltopics }}
+          - name: ADCTOPICS_{{ $index }}
+            value: "{{ $value }}"
+          {{- end }}
+          - name: TOPICBUFFERTIME
+            value: "{{ $.Values.kafka.topicbuffertime }}"
+          - name: BOOTSTRAP_EXTERNAL
+            valueFrom:
+              configMapKeyRef:
+                name: testware-hostnames
+                key: kafkaBootstrap
+          - name: PROMETHEUS_MULTIPROC_DIR
+            value: "/var/tmp"    
+          command: ['python3.11']
+          args: ["app.py"]
+          volumeMounts:
+            - mountPath: /var/tmp/
+              name: serverca
+            - mountPath: /resources
+              name: tarfile
+            - mountPath: /kafka-wrapper/pm_event
+              name: protopath
+
+            
+
+
+

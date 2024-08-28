@@ -1,0 +1,25 @@
+# Default values for kafka-wrapper.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+global:
+  pullSecret: k8s-registry-secret
+
+image:
+  pullPolicy: IfNotPresent
+
+platformSecretName: 
+platformcaCertFileName: 
+platformcaCertMountPath: 
+
+kafkaSecretName: 
+kafkacaCertFileName: 
+kafkacaCertMountPath: 
+ 
+iam_uri: 
+gas_uri:
+bdr_uri:
+clientId: 
+clientSecret: 
+userName: dmm-admin
+userPassword: Ericsson123!

@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "acmr-mock.name" . }}-deployment
+  labels:
+    {{- include "acmr-mock.selectorLabels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "acmr-mock.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "acmr-mock.selectorLabels" . | nindent 8 }}
+        {{- include "acmr-mock.service-mesh-inject" .| nindent 8 }}
+        {{- include "acmr-mock.service-mesh-ism2osm-labels" .| nindent 8 }}
+      annotations:
+        {{- include "acmr-mock.service-mesh-inject" .| nindent 8 }}
+        {{- include "acmr-mock.service-mesh-volume" .| nindent 8 }}
+    spec:
+      imagePullSecrets:
+        - name: k8s-registry-secret
+      volumes:
+        - name: serverca
+          emptyDir: {} 
+      containers:
+        - name: {{ .Chart.Name }}
+          image: {{ template "acmr-mock.imagePath" . }}
+          tty: true
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8082
+              protocol: TCP
+          resources:
+            requests:
+              memory: "500Mi"
+              cpu: "1000m"
+            limits:
+              memory: "2048Mi"
+              cpu: "2500m"
+          env:
+          - name: BROKER
+            value: "{{ .Values.kafka.bootstrap_servers }}"
+          - name: NAMESPACE
+            value: {{ .Release.Namespace }}   
+          command: ['python3.11']
+          args: ["app.py"]
+          volumeMounts:
+            - mountPath: /var/tmp/
+              name: serverca
+
+            
+
+
+

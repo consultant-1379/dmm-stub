@@ -1,0 +1,10 @@
+schedule
+Flask
+avro
+confluent_kafka
+requests
+jsonschema
+argparse
+fastavro
+prometheus_client
+werkzeug

@@ -1,0 +1,43 @@
+
+site_name: KAFKA WRAPPER
+copyright: Copyright &copy; 2022 Ericsson AB - All Rights Reserved
+use_directory_urls: false
+site_dir: /site/docs
+theme:
+  name: material
+  logo: img/ericsson_econ.svg
+  favicon: img/favicon.ico
+  font: false
+  custom_dir: overrides
+  features:
+    - navigation.instant
+    - navigation.sections
+extra_css:
+  - css/extra.css
+extra_javascript:
+  - javascript/extra.js
+markdown_extensions:
+  - attr_list
+  - md_in_html
+extra:
+  generator: false
+plugins:
+  - search
+  - glightbox
+  - build_plantuml:
+      render: "local"
+      bin_path: "/usr/bin/plantuml"
+      output_format: "svg"
+      diagram_root: "docs/diagrams"
+      output_folder: "gen"
+      input_folder: "src"
+      input_extensions: "puml"
+nav:
+  - Home: 'index.md'
+  - Kafka wrapper:
+      - User Guide: 'testware-doc/user_guide.md'
+      - API_Document:
+          - Count-Topic : 'testware-doc/API_Document/count-topic.md'
+          - Get-Topic: 'testware-doc/API_Document/get-topic.md'
+          - Describe-Topic : 'testware-doc/API_Document/describe-topic.md'
+      - Developer Guide: 'testware-doc/developer_guide.md'

@@ -1,0 +1,7 @@
+{
+    "name": "test7${random_string}${RANDOM}",
+    "clusterName": "test8${random_string}${RANDOM}",
+    "nameSpace": "test9${random_string}${RANDOM}",
+    "accessEndpoints": ["data-object-storage-mn.sunshine-harii:9000"],
+    "endPointType": "external"
+}

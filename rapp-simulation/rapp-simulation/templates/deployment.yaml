@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "rapp-simulation.name" . }}-deployment
+  labels:
+    {{- include "rapp-simulation.selectorLabels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "rapp-simulation.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "rapp-simulation.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "rapp-simulation.name" . }}-sa
+      imagePullSecrets:
+        - name: {{ template "rapp-simulation.pullSecrets" . }}
+      volumes:
+        - name: messagebusca
+          secret:
+            defaultMode: 420
+            secretName: {{ index .Values "kafkaSecretName" | quote }}
+        - name: iamtls
+          secret:
+            defaultMode: 420
+            secretName: {{ index .Values "platformSecretName" | quote }} 
+        - name: serverca
+          emptyDir: {} 
+        - name: schemapath
+          emptyDir: {}
+      containers:
+        - name: {{ .Chart.Name }}
+          image: {{ template "rapp-simulation.imagePath" (dict "imageId" "rapp-simulation" "values" .Values "files" .Files) }}
+          tty: true
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+          - name: NAMESPACE
+            value: {{ .Release.Namespace }}
+          - name: "IAM_URI"
+            value: https://{{ $.Values.iam_uri }}/auth/realms/master/protocol/openid-connect/token
+          - name: "GAS_URI"
+            value: https://{{ $.Values.gas_uri }}
+          - name: "BDR_URI"
+            value: https://{{ $.Values.bdr_uri }}
+          - name: "BDR_HOST"
+            value: {{ $.Values.bdr_uri }}
+          - name: CLIENT_ID
+            value: {{ $.Values.clientId }}
+          - name: CLIENT_PSW
+            value: "{{ $.Values.clientSecret }}"    
+          - name: platformSecretName
+            value: {{ index .Values "platformSecretName" | quote }}
+          - name: platformcaCertFileName
+            value: {{ index .Values "platformcaCertFileName" | quote }}
+          - name: platformcaCertMountPath
+            value: {{ index .Values "platformcaCertMountPath" | quote }}
+          - name: kafkaSecretName
+            value: {{ index .Values "kafkaSecretName" | quote }}
+          - name: kafkacaCertFileName
+            value: {{ index .Values "kafkacaCertFileName" | quote }}    
+          - name: kafkacaCertMountPath
+            value: {{ index .Values "kafkacaCertMountPath" | quote }}
+          - name: userName
+            value: {{ index .Values "userName" | quote }}
+          - name: userPassword
+            value: {{ index .Values "userPassword" | quote }}
+          command: ['python3']
+          args: ["app.py"]
+          volumeMounts:
+            - mountPath: /var/tmp/
+              name: serverca
+            - mountPath: {{ index .Values "kafkacaCertMountPath" | quote }}
+              name: messagebusca
+              readOnly: true
+            - mountPath: {{ index .Values "platformcaCertMountPath" | quote }}
+              name: iamtls
+              readOnly: true
+            - mountPath: /resources
+              name: schemapath
+
+
+            
+
+
+

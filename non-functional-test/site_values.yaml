@@ -1,0 +1,32 @@
+global:
+  hosts:
+    iam: ""
+    gas: ""
+  registry:
+    url: "armdocker.rnd.ericsson.se"
+    username: "admin"
+    password: "ericsson"
+  support:
+    ipv6:
+      enabled: false
+  timezone: UTC
+  createClusterRoles: true
+# Warning! If changing these application tags from true to false and that application
+# is already installed, then that application will be removed and data will be lost!
+tags:
+  data-catalog: true
+  dmm-common-db: true
+  schema-registry: true
+  strimzi-bridge: true
+  strimzi-op: true
+  data-collection-controller: true
+api-gateway-route:
+  enable: false
+  credentials:
+    name: eric-oss-system-user-secret
+    
+entityOperator:
+  kafkaTopic:
+    create: true
+  kafkaUser:
+    create: true

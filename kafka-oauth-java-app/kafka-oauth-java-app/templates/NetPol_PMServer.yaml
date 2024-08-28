@@ -1,0 +1,15 @@
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: {{ include "kafka-oauth-java-app.name" . }}-pm-server-network-policy
+  labels:
+    app: eric-pm-server
+spec:
+  podSelector:
+    matchLabels:
+      app: eric-pm-server
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+            {{- include "kafka-oauth-java-app.selectorLabels" . | nindent 12 }}

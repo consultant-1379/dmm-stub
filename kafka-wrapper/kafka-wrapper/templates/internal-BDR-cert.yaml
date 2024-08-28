@@ -1,0 +1,21 @@
+{{- if index .Values "env" "TLS" }}
+apiVersion: siptls.sec.ericsson.com/v1
+kind: InternalCertificate
+metadata:
+  name: {{ include "kafka-wrapper.name" . }}-bdr-int-cert
+  labels:
+  {{- include "kafka-wrapper.labels" . | nindent 4 }}
+spec:
+  kubernetes:
+    generatedSecretName: {{ include "kafka-wrapper.name" . }}-bdr-secret
+    certificateName: "cert.pem"
+    privateKeyName: "key.pem"
+  certificate:
+    subject:
+      cn: {{ include "kafka-wrapper.name" . }}
+    issuer:
+      reference: eric-data-object-storage-mn-ca
+    extendedKeyUsage:
+      tlsClientAuth: true
+      tlsServerAuth: true
+{{- end }}

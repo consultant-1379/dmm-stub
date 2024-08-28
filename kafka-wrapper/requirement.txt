@@ -1,0 +1,20 @@
+schedule
+kafka-python 
+crc32c
+lz4
+Flask
+avro
+confluent_kafka
+requests
+jsonschema
+argparse
+uuid
+faker
+kubernetes
+fastavro
+protobuf == 4.25.1
+numpy
+prometheus_client
+minio
+werkzeug
+python-json-logger

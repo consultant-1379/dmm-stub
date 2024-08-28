@@ -1,0 +1,43 @@
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaUser
+metadata:
+  name: {{ $.Values.env.CLIENT_ID }}
+  labels:
+    strimzi.io/cluster: eric-oss-dmm-kf-op-sz
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade,pre-rollback
+    "helm.sh/hook-weight": "-15"
+spec:
+  authorization:
+    type: simple
+    acls:
+      - resource:
+          type: topic
+          name: '*'
+          patternType: literal
+        operation: All
+      - resource:
+          type: group
+          name: '*'
+          patternType: literal
+        operation: All
+      - operation: All
+        resource:
+          name: '*'
+          patternType: literal
+          type: group
+      - operation: Write
+        resource:
+          name: '*'
+          patternType: literal
+          type: topic
+      - operation: Create
+        resource:
+          name: '*'
+          patternType: literal
+          type: topic
+      - operation: Read
+        resource:
+          name: '*'
+          patternType: literal
+          type: topic

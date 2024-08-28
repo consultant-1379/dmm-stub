@@ -1,0 +1,17 @@
+{
+  "version": "1.0",
+  "subscriptions": [{
+      "name": "rapp-simulation",
+      "isMandatory": "yes",
+      "isOnHold": "no",
+      "dataType": {
+        "dataspace": "5G",
+        "dataCategory": "PM_COUNTERS",
+        "schemaName": "EP_XnU_GNBCUUP_1"
+      },
+      "predicates":{
+          "nodeName": ["*ManagedElement=*"]
+      }
+  }]
+}
+
